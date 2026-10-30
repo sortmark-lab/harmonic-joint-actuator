@@ -1,0 +1,27 @@
+{
+  "name": "harmonic-joint-actuator",
+  "version": "1.0.0",
+  "description": "Interactive 3D Concentric Harmonic Drive Joint Actuator & Teardown Simulation by SORTMARK",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve -l 3000 ."
+  },
+  "keywords": [
+    "harmonic-drive",
+    "joint-actuator",
+    "robotics-actuator",
+    "brushless-motor",
+    "foc",
+    "cross-roller-bearing",
+    "threejs",
+    "cad-cutaway",
+    "sortmark"
+  ],
+  "author": "SORTMARK <contact@sortmark.com> (https://sortmark.com)",
+  "homepage": "https://sortmark.com",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sortmark-lab/harmonic-joint-actuator.git"
+  }
+}

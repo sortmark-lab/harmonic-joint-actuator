@@ -1,0 +1,1451 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SORTMARK | Concentric Drive Joint Actuator (3D Precision Mechanism)</title>
+  <meta name="description" content="3D Precision Concentric Drive Joint Actuator Simulation by SORTMARK.">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg-deep: #070714;
+      --bg-panel: rgba(13, 14, 28, 0.94);
+      --border-dim: rgba(255,255,255,0.09);
+      --border-focus: rgba(168,85,247,0.5);
+      --text-primary: #edf2f7;
+      --text-secondary: #9aa5b8;
+      --accent-purple: #a855f7;
+      --accent-green: #22c55e;
+      --accent-cyan: #38bdf8;
+      --accent-blue: #3b82f6;
+      --accent-amber: #f59e0b;
+      --accent-red: #ef4444;
+      --accent-gold: #facc15;
+    }
+    body {
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      overflow: hidden;
+      display: flex;
+      height: 100vh;
+      user-select: none;
+    }
+    #viewport-container {
+      flex: 1;
+      position: relative;
+      background: radial-gradient(ellipse at 50% 35%, #181938 0%, #070714 100%);
+    }
+    #canvas3d { width: 100%; height: 100%; display: block; }
+
+    /* Top Toolbar */
+    .top-toolbar {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: var(--bg-panel);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border-dim);
+      padding: 10px 14px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+      z-index: 30;
+      max-width: calc(100vw - 440px);
+    }
+    .toolbar-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .brand {
+      font-size: 0.86rem;
+      font-weight: 700;
+      background: linear-gradient(120deg, #38bdf8 0%, #818cf8 60%, #a78bfa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      white-space: nowrap;
+    }
+    .toolbar-sep { width: 1px; height: 20px; background: var(--border-dim); flex-shrink: 0; }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border-dim);
+      color: var(--text-secondary);
+      text-decoration: none;
+      padding: 5px 11px;
+      border-radius: 6px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .nav-link:hover {
+      background: rgba(56,189,248,0.15);
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+
+    /* Preset & Mode Groups */
+    .btn-group {
+      display: flex;
+      background: rgba(0,0,0,0.45);
+      padding: 3px;
+      border-radius: 8px;
+      border: 1px solid var(--border-dim);
+      gap: 2px;
+    }
+    .ctrl-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      padding: 5px 9px;
+      border-radius: 6px;
+      font-size: 0.71rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .ctrl-btn:hover { color: #fff; }
+    .ctrl-btn.active {
+      background: linear-gradient(135deg, rgba(56,189,248,0.25) 0%, rgba(59,130,246,0.25) 100%);
+      color: var(--accent-cyan);
+      border: 1px solid rgba(56,189,248,0.45);
+    }
+    .badge-pill {
+      font-size: 0.65rem;
+      padding: 1px 5px;
+      border-radius: 10px;
+      background: rgba(34,197,94,0.2);
+      color: #4ade80;
+      border: 1px solid rgba(34,197,94,0.3);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Left Floating Specs HUD */
+    .specs-card {
+      position: absolute;
+      top: 106px;
+      left: 14px;
+      width: 320px;
+      background: var(--bg-panel);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border-dim);
+      border-radius: 12px;
+      padding: 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      z-index: 25;
+      font-size: 0.75rem;
+    }
+    .specs-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-dim);
+    }
+    .specs-title { font-weight: 700; color: #fff; font-size: 0.82rem; }
+    .badge {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 0.65rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+    }
+    .badge-cyan { background: rgba(56,189,248,0.15); color: var(--accent-cyan); border: 1px solid rgba(56,189,248,0.3); }
+    .badge-green { background: rgba(34,197,94,0.15); color: #4ade80; border: 1px solid rgba(34,197,94,0.3); }
+    .badge-gold { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); }
+
+    .spec-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      color: var(--text-secondary);
+      border-bottom: 1px dashed rgba(255,255,255,0.05);
+    }
+    .spec-row:last-child { border-bottom: none; }
+    .spec-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    /* Exploded Slider Bar */
+    .exploded-bar {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--bg-panel);
+      backdrop-filter: blur(15px);
+      border: 1px solid var(--border-dim);
+      padding: 8px 18px;
+      border-radius: 30px;
+      display: none;
+      align-items: center;
+      gap: 12px;
+      z-index: 25;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.6);
+    }
+    .exploded-bar.show { display: flex; }
+    .slider {
+      -webkit-appearance: none;
+      width: 220px;
+      height: 4px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 2px;
+      outline: none;
+    }
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--accent-cyan);
+      cursor: pointer;
+      box-shadow: 0 0 10px var(--accent-cyan);
+    }
+
+    /* View Controls */
+    .view-controls {
+      position: absolute;
+      bottom: 24px;
+      left: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      z-index: 25;
+    }
+    .vc-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-dim);
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .vc-btn:hover {
+      background: rgba(56,189,248,0.2);
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+
+    /* Right Sidebar - Layers & Engineering */
+    .sidebar {
+      width: 440px;
+      background: var(--bg-panel);
+      border-left: 1px solid var(--border-dim);
+      display: flex;
+      flex-direction: column;
+      z-index: 20;
+    }
+    .sidebar-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border-dim);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .sidebar-title {
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .sidebar-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .sidebar-content::-webkit-scrollbar { width: 5px; }
+    .sidebar-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+
+    /* Concept & Philosophy Cards */
+    .feature-card {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(56,189,248,0.25);
+      border-radius: 10px;
+      padding: 12px 14px;
+      position: relative;
+    }
+    .feature-card.gold-border { border-color: rgba(245,158,11,0.35); background: rgba(24, 18, 10, 0.75); }
+    .feature-card.green-border { border-color: rgba(34,197,94,0.35); background: rgba(10, 24, 18, 0.75); }
+    
+    .feature-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .feature-desc {
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+      line-height: 1.55;
+    }
+    .feature-bullets {
+      margin-top: 8px;
+      padding-left: 16px;
+      font-size: 0.71rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+    .feature-bullets li strong { color: var(--text-primary); }
+
+    /* Layer Items */
+    .layer-item {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border-dim);
+      border-radius: 8px;
+      padding: 10px 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .layer-item:hover {
+      background: rgba(56,189,248,0.06);
+      border-color: rgba(56,189,248,0.4);
+    }
+    .layer-item.active {
+      background: rgba(56,189,248,0.12);
+      border-color: var(--accent-cyan);
+    }
+    .layer-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+    .layer-name { font-size: 0.76rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 6px; }
+    .layer-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .layer-tag { font-size: 0.65rem; color: var(--accent-cyan); font-family: 'JetBrains Mono', monospace; }
+    .layer-desc { font-size: 0.7rem; color: var(--text-secondary); line-height: 1.45; }
+    .layer-meta {
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px dashed rgba(255,255,255,0.08);
+      font-size: 0.68rem;
+      color: #94a3b8;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+  </style>
+</head>
+<body>
+  <!-- 3D Viewport -->
+  <div id="viewport-container">
+    <canvas id="canvas3d"></canvas>
+
+    <!-- Top Navigation Toolbar -->
+    <div class="top-toolbar">
+      <div class="toolbar-row">
+        <a href="../robot-arm-kinematics/" class="nav-link">← 机械臂整机运动学</a>
+        <div class="toolbar-sep"></div>
+        <a href="https://sortmark.com" target="_blank" rel="home" class="brand" style="text-decoration:none;display:flex;align-items:center;gap:6px;">⚡ <span style="font-weight:800;">SORTMARK</span> · 谐波动力关节执行器 3D</a>
+        <div class="toolbar-sep"></div>
+        <a href="https://sortmark.com" target="_blank" rel="home" class="nav-link" style="margin-left:auto;border-color:rgba(168,85,247,0.4);color:var(--accent-purple);font-weight:700;">🌐 SORTMARK.COM ↗</a>
+      </div>
+      <div class="toolbar-row">
+
+        <!-- 3 Reducer Cartridges -->
+        <span style="font-size:0.7rem;color:var(--text-secondary);margin-left:4px;">可换密封卡匣:</span>
+        <div class="btn-group">
+          <button class="ctrl-btn active" id="btn-red-harmonic" onclick="setReducer('harmonic', this)">
+            🌀 1:50 谐波卡匣 (机械臂)
+          </button>
+          <button class="ctrl-btn" id="btn-red-planetary" onclick="setReducer('planetary', this)">
+            ⚙️ 1:7 行星卡匣 (足式/力控)
+          </button>
+          <button class="ctrl-btn" id="btn-red-direct" onclick="setReducer('direct', this)">
+            ⭕ 1:1 直驱套件 (云台/雷达)
+          </button>
+        </div>
+      </div>
+
+      <div class="toolbar-row">
+        <!-- Modes: Tri-Block Teardown, Exploded, Cutaway, Assembled -->
+        <span style="font-size:0.7rem;color:var(--text-secondary);">结构观察:</span>
+        <div class="btn-group">
+          <button class="ctrl-btn active" id="btn-mode-teardown" onclick="setMode('teardown', this)">
+            🛠️ 三段式快拆演示
+          </button>
+          <button class="ctrl-btn" id="btn-mode-exploded" onclick="setMode('exploded', this)">
+            💥 轴向爆炸分解
+          </button>
+          <button class="ctrl-btn" id="btn-mode-cutaway" onclick="setMode('cutaway', this)">
+            🔬 内部同心剖切
+          </button>
+          <button class="ctrl-btn" id="btn-mode-exterior" onclick="setMode('exterior', this)">
+            🔒 完整装配运行
+          </button>
+          <button class="ctrl-btn" id="btn-mode-mating" onclick="setMode('mating', this)">
+            🔗 连杆动静装配
+          </button>
+        </div>
+
+        <div class="toolbar-sep"></div>
+
+        <!-- Smart Crypto Auth State Toggle -->
+        <button class="ctrl-btn" id="btn-auth-toggle" onclick="toggleAuthState()" style="background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);color:#4ade80;">
+          🛡️ 官方加密认证: [正品·100%性能]
+        </button>
+
+        <!-- RGB Halo Ring Customizer -->
+        <button class="ctrl-btn" onclick="cycleHaloColor()" id="btn-halo" style="background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.35);color:#c084fc;">
+          🌈 极客光环: 冰蓝
+        </button>
+      </div>
+    </div>
+
+    <!-- Left Specs & Engineering Standards HUD -->
+    <div class="specs-card">
+      <div class="specs-header">
+        <span class="specs-title" id="hud-model-title">SORTMARK CJ-8009</span>
+        <span class="badge badge-green" id="hud-auth-badge">标准动力规格</span>
+      </div>
+      <div class="spec-row">
+        <span>架构范式:</span>
+        <span class="spec-val" style="color:var(--accent-cyan)">三段式积木物理解耦</span>
+      </div>
+      <div class="spec-row">
+        <span>维护洁净度:</span>
+        <span class="spec-val" style="color:#4ade80">干湿绝对隔离 · 0滴油沾手</span>
+      </div>
+      <div class="spec-row">
+        <span>标准紧固件:</span>
+        <span class="spec-val">全机单一 M3 螺栓 (单扳手拆)</span>
+      </div>
+      <div class="spec-row">
+        <span>电控接口:</span>
+        <span class="spec-val" style="color:#facc15">免焊接大电流弹簧探针</span>
+      </div>
+      <div class="spec-row">
+        <span>防伪防乱卖:</span>
+        <span class="spec-val">1-Wire/NFC 硬件加密认证芯片</span>
+      </div>
+      <div class="spec-row">
+        <span>中空穿线通径:</span>
+        <span class="spec-val">Ø20 mm 免拆端子直通管</span>
+      </div>
+      <div class="spec-row">
+        <span>当前装配减速匣:</span>
+        <span class="spec-val" id="hud-reducer-val" style="color:var(--accent-purple)">1:50 零背隙谐波胶囊</span>
+      </div>
+      <div class="spec-row">
+        <span>额定/峰值力矩:</span>
+        <span class="spec-val" id="hud-torque-val">18 / 54 Nm (机械臂工况)</span>
+      </div>
+      <div class="spec-row">
+        <span>主承力轴承:</span>
+        <span class="spec-val">CRB-5515 超薄高刚性交叉滚子</span>
+      </div>
+    </div>
+
+    <!-- Exploded Distance Slider Bar -->
+    <div class="exploded-bar" id="exploded-bar">
+      <span style="font-size:0.75rem;font-weight:600;color:var(--accent-cyan);">💥 分解爆炸间距</span>
+      <input type="range" class="slider" id="explode-slider" min="0" max="150" value="80" oninput="onExplodeSlider(this.value)">
+      <span style="font-size:0.75rem;font-family:'JetBrains Mono',monospace;color:#fff;" id="explode-val">80%</span>
+    </div>
+
+    <!-- View & Zoom Controls -->
+    <div class="view-controls">
+      <div class="vc-btn" onclick="zoomCam(1)" title="放大">+</div>
+      <div class="vc-btn" onclick="zoomCam(-1)" title="缩小">−</div>
+      <div class="vc-btn" onclick="resetCam()" title="重置视角">↺</div>
+    </div>
+  </div>
+
+  <!-- Right Sidebar - Ecosystem, Clean Maintenance & Layer Inspection -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-title">
+        <span>⚙️ 执行器架构与发烧友生态</span>
+      </div>
+      <span class="badge badge-cyan">开放标准 V2.4</span>
+    </div>
+
+    <div class="sidebar-content">
+      <!-- Feature Card 1: 🛡️ Crypto-Auth & Certified Standard Parts -->
+      <div class="feature-card gold-border">
+        <div class="feature-title" style="color:#fbbf24;">
+          <span>🛡️ 认证厂标准件与硬件防乱卖机制</span>
+        </div>
+        <div class="feature-desc">
+          采用硬件级双向安全认证与智能数字识别协议（ECDSA）：
+        </div>
+        <ul class="feature-bullets">
+          <li><strong>模块化硬件控制与身份标定</strong>：每个动力卡匣内嵌独立的微型数字身份芯片，防止未标定非标外设损害电机驱动板。</li>
+          <li><strong>智能即插即用握手</strong>：卡匣滑入机身瞬间，主控主板读取 UID 并自动载入该批次微米齿隙补偿表与最优 FOC 控制参数！</li>
+          <li><strong>开放标准与安全保护</strong>：支持极客开发者自定义驱动配置，同时提供全方位的过流、过温与堵转硬件保护。</li>
+        </ul>
+      </div>
+
+      <!-- Feature Card 2: 🧼 Dry/Wet Isolation (Zero Grease Mess) -->
+      <div class="feature-card green-border">
+        <div class="feature-title" style="color:#4ade80;">
+          <span>🧼 干湿绝对隔离：双手一滴油不沾</span>
+        </div>
+        <div class="feature-desc">
+          严格划分机械传动与高集成电气硬件的物理边界：
+        </div>
+        <ul class="feature-bullets">
+          <li><strong>前段湿区（出厂密封胶囊）</strong>：谐波/行星齿轮注满专用合成润滑脂，由<strong>双唇氟橡胶骨架旋转油封</strong>终身锁死（10,000h免维护），更换卡匣外壳干爽洁净。</li>
+          <li><strong>后段干区（纯洁净电控室）</strong>：FOC 主板、高精度磁阻编码器绝对无油；采用<strong>免焊接大电流镀金弹簧插针（Pogo-Pin）</strong>，拧开后盖直接拔下主板。</li>
+          <li><strong>轴心中空走线管</strong>：无缝不锈钢过线内胆，总线干爽穿过，绝无油气腐蚀线皮。</li>
+        </ul>
+      </div>
+
+      <!-- Feature Card 3: 🧰 Single Tool Maintenance -->
+      <div class="feature-card">
+        <div class="feature-title" style="color:var(--accent-cyan);">
+          <span>🧰 一体化标准化装配规范</span>
+        </div>
+        <div class="feature-desc">
+          全机所有主结构紧固件<strong>100% 统一为标准沉头内六角螺栓（DIN 7991）</strong>，所有铝合金螺孔<strong>全部内嵌 304 不锈钢钢丝螺套</strong>，多次高强度拆装也绝不滑丝。
+        </div>
+      </div>
+
+      <!-- Feature Card 4: Status Indicator -->
+      <div class="feature-card" style="border-color:rgba(168,85,247,0.35);background:rgba(22,15,30,0.75);">
+        <div class="feature-title" style="color:#c084fc;">
+          <span>🌈 可编程 RGB 极客状态指示光环</span>
+        </div>
+        <div class="feature-desc">
+          高亮度外圈环形呼吸光环，提供待机冰蓝、运行高亮、示教柔光等多状态视觉指示。
+        </div>
+      </div>
+
+      <!-- Contact & Business Consultation Card -->
+      <div class="feature-card" style="border-color:rgba(168,85,247,0.45);background:rgba(20,14,32,0.85);margin-top:6px;">
+        <div class="feature-title" style="color:var(--accent-purple);">
+          <span>🚀 动力关节工业级定制与选型支持</span>
+        </div>
+        <div class="feature-desc">
+          SORTMARK 专注于机器人高性能动力关节、无框力矩电机与谐波减速一体化机构设计。<br>
+          <div style="margin-top:6px;display:flex;justify-content:space-between;align-items:center;">
+            <a href="mailto:contact@sortmark.com" style="color:#fff;text-decoration:none;font-weight:600;">✉️ contact@sortmark.com</a>
+            <a href="https://sortmark.com" target="_blank" rel="home" style="color:var(--accent-purple);text-decoration:none;font-weight:700;">sortmark.com ↗</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Interactive Layer Inspection List -->
+      <div style="font-size:0.8rem;font-weight:700;color:#fff;margin-top:6px;display:flex;justify-content:space-between;align-items:center;">
+        <span>📦 8 层物理结构与装配清册</span>
+        <span style="font-size:0.68rem;color:var(--text-secondary);">点击在 3D 中高亮</span>
+      </div>
+      <div id="layer-list-container" style="display:flex;flex-direction:column;gap:8px;"></div>
+    </div>
+  </div>
+
+  <script>
+    // -------------------------------------------------------------------
+    // 1. DATA SPECIFICATIONS & CONSTANTS
+    // -------------------------------------------------------------------
+    const DM_SIZES = {
+      L: { name: 'CJ-8009 (Ø96×42)', R: 48, H: 42, bore: 10, PCD: 37.5, torqueHarmonic: '18 / 54 Nm', torquePlanetary: '6 / 18 Nm' },
+      M: { name: 'CJ-6006 (Ø76×36.5)', R: 38, H: 36.5, bore: 8, PCD: 30, torqueHarmonic: '9 / 27 Nm', torquePlanetary: '3.5 / 10 Nm' },
+      S: { name: 'CJ-4310 (Ø57×35)', R: 28.5, H: 35, bore: 6.5, PCD: 22, torqueHarmonic: '4.5 / 13 Nm', torquePlanetary: '1.8 / 5 Nm' }
+    };
+
+    let currentSize = 'L';
+    let currentReducerType = 'harmonic'; // 'harmonic' | 'planetary' | 'direct'
+    let currentMode = 'teardown';         // 'teardown' | 'exploded' | 'cutaway' | 'exterior' | 'mating'
+    let isGenuineAuth = true;            // Official crypto-auth handshake state
+    let haloColorIndex = 0;
+    const HALO_COLORS = [
+      { name: '冰蓝 (Cyber Cyan)', hex: 0x38bdf8 },
+      { name: '钢铁金红 (Iron Man)', hex: 0xf59e0b },
+      { name: '赛博紫 (Neon Purple)', hex: 0xa855f7 },
+      { name: '摄影暖白 (Warm Studio)', hex: 0xfef08a }
+    ];
+
+    // Detailed 8 Physical Layers
+    const LAYERS_DATA = [
+      {
+        id: 'rear_cap',
+        name: '01 CNC 阳极黑深腔后盖 (Rear Endbell)',
+        tag: '后段电控 · 洁净干区',
+        dotColor: '#475569',
+        rIn: 12, rOut: 48, len: 14,
+        mat: '航空 7075-T6 阳极钛灰铝合金 + 氟橡胶 O-Ring 密封槽',
+        tool: '4×M3 沉头螺栓，单把 2.5mm 内六角从后部无损旋开',
+        desc: '纯洁净干区外壳。内侧有氟橡胶密封槽与侧壁走线防水 U 槽，保护内部控制板与绝对值编码器。'
+      },
+      {
+        id: 'foc_pcb',
+        name: '02 免焊接沉金 FOC 控制主板 (Solderless FOC PCB)',
+        tag: '后段电控 · 免焊拔插',
+        dotColor: '#22c55e',
+        rIn: 10, rOut: 42, len: 3.2,
+        mat: '4层沉金黑油 FR4 + STM32G4 FOC主控 + 6×DFN MOSFET + 6×大电流镀金弹簧插针 (Pogo-Pins)',
+        tool: '0 焊接！松开螺丝后，主板像插拔乐高一样直接拔下，定子漆包线毫发无损',
+        desc: '内置高速磁阻编码芯片，板载镀金弹簧排针直插定子铜排。支持开放式 DIY 换装自研驱动板。'
+      },
+      {
+        id: 'stator_carrier',
+        name: '03 标志性十字辐条轴承支架 (Cross Carrier & Lugs)',
+        tag: '中段动力 · 机械骨骼',
+        dotColor: '#64748b',
+        rIn: 11, rOut: 46, len: 12,
+        mat: '航空 7075-T6 铝合金高速五轴精雕，内嵌精密超薄深沟球轴承',
+        tool: '4 根十字受力辐条与外圈 6 个穿孔安装耳，直锁上游连杆大梁',
+        desc: '整台执行器的受力主骨架！高刚性连通轴承座与外部安装耳，全螺孔内嵌 304 不锈钢螺套。'
+      },
+      {
+        id: 'rotor',
+        name: '04 永磁外转子与花键太阳轮轴 (Rotor Bell & Spline Shaft)',
+        tag: '中段动力 · G0.4动平衡',
+        dotColor: '#38bdf8',
+        rIn: 26, rOut: 36, len: 24,
+        mat: '轻量化镂空航空铝转子罩 + 28极 N52SH 耐高温瓦片磁钢 + DIN 5480 渐开线花键输出轴',
+        tool: '出厂激光动平衡配平，前伸渐开线花键与前置减速卡匣浮动中空插接',
+        desc: '高爆发无刷外转子。周身开有通风散热轻量化开槽，内圈磁钢由高强度耐温环氧结构胶灌封。'
+      },
+      {
+        id: 'stator',
+        name: '05 硅钢定子铁芯与纯紫铜密集绕组 (Stator & Copper Coils)',
+        tag: '中段动力 · 金红紫铜',
+        dotColor: '#d97706',
+        rIn: 18, rOut: 31, len: 22,
+        mat: '0.2mm 日本川崎超薄高导磁硅钢片叠压 + 180℃ 纯紫铜漆包线多股密绕',
+        tool: '高槽满率集中绕组，引出镀金铜排直接对准后部主板弹簧针',
+        desc: '金红纯紫铜质感。同轴套置于转子内部，超薄气隙产生强大旋转磁场，峰值转矩达 54 Nm。'
+      },
+      {
+        id: 'sealed_cartridge',
+        name: '06 出厂终身预润滑减速卡匣 (Sealed Reducer Cartridge)',
+        tag: '前段卡匣 · 湿区终身锁油',
+        dotColor: '#a855f7',
+        rIn: 10, rOut: 48, len: 34,
+        mat: '独立金属密封胶囊 + 零背隙柔轮/刚轮 + 双唇骨架旋转油封 + 1-Wire 硬件加密防伪芯片',
+        tool: '6×M3 螺栓旋开，整颗卡匣整体滑出！双手不沾一滴黄油，5 分钟自由切换不同减速比',
+        desc: '【核心发明】湿区齿轮由高品质合成油脂出厂终身密封，内置加密芯片保障正品认证与 PID 自动装载。'
+      },
+      {
+        id: 'cross_bearing',
+        name: '07 超薄高刚性交叉滚子轴承 (Cross Roller Bearing - CRB)',
+        tag: '承力核心 · 倾覆弯矩解耦',
+        dotColor: '#f1f5f9',
+        rIn: 34, rOut: 46, len: 10,
+        mat: 'GCr15 淬火高光精密轴承钢，90° 相互垂直交叉圆柱滚子',
+        tool: '外圈螺栓锁紧机壳，内圈锁紧输出法兰，出厂精密微米负游隙预紧',
+        desc: '关节机械灵魂！同时承受径向、双向轴向及几十 Nm 侧向倾覆弯矩，彻底保护减速器齿轮不受侧力扭曲。'
+      },
+      {
+        id: 'conduit',
+        name: '00 贯穿全轴的不锈钢中空走线套筒 (Central Hollow Conduit)',
+        tag: '几何轴心 · 洁净免拆通径',
+        dotColor: '#94a3b8',
+        rIn: 0, rOut: 10, len: 54,
+        mat: 'SUS304 航空级无缝薄壁不锈钢管 (内壁粗糙度 Ra 0.4，全倒圆角防刮线)',
+        tool: 'Ø20mm 大通径，XT30及各类总线接头直接整根穿过，免剪线压端子',
+        desc: '完全与齿轮润滑区隔离。CAN-FD、48V 电源线由管内穿过，关节旋转时只在轴心微扭，永不磨损。'
+      }
+    ];
+
+    // -------------------------------------------------------------------
+    // 2. THREE.JS SCENE SETUP
+    // -------------------------------------------------------------------
+    let scene, camera, renderer, controls;
+    let actuatorGroup = new THREE.Group();
+    let upstreamPlateGroup = new THREE.Group();
+    let downstreamPlateGroup = new THREE.Group();
+    let haloLightMesh = null;
+    let componentMeshes = {};
+    let isRunningMotion = false;
+    let clock = new THREE.Clock();
+
+    function initThree() {
+      const container = document.getElementById('viewport-container');
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+
+      scene = new THREE.Scene();
+      scene.fog = new THREE.FogExp2(0x070a10, 0.0016);
+
+      camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 1000);
+      camera.position.set(135, 95, 145);
+
+      renderer = new THREE.WebGLRenderer({
+        canvas: document.getElementById('canvas3d'),
+        antialias: true,
+        alpha: false,
+        powerPreference: 'high-performance'
+      });
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+      controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.05;
+      controls.target.set(-6, 0, 0);
+      controls.maxDistance = 450;
+      controls.minDistance = 25;
+
+      // Studio 4-Point High-Fidelity Lighting (Crisp metal reflections)
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.95);
+      scene.add(ambientLight);
+
+      const keyLight = new THREE.DirectionalLight(0xffffff, 1.8);
+      keyLight.position.set(140, 180, 160);
+      keyLight.castShadow = true;
+      keyLight.shadow.mapSize.width = 2048;
+      keyLight.shadow.mapSize.height = 2048;
+      scene.add(keyLight);
+
+      const fillLight = new THREE.DirectionalLight(0x94a3b8, 0.85);
+      fillLight.position.set(-140, 80, -100);
+      scene.add(fillLight);
+
+      const topLight = new THREE.DirectionalLight(0xffffff, 0.9);
+      topLight.position.set(0, 200, 0);
+      scene.add(topLight);
+
+      const rimLight = new THREE.DirectionalLight(0x38bdf8, 1.2);
+      rimLight.position.set(-50, -100, -140);
+      scene.add(rimLight);
+
+      // Floor Grid
+      const grid = new THREE.GridHelper(320, 32, 0x334155, 0x1e293b);
+      grid.position.y = -52;
+      scene.add(grid);
+
+      scene.add(actuatorGroup);
+      scene.add(upstreamPlateGroup);
+      scene.add(downstreamPlateGroup);
+
+      buildModel();
+      populateLayerList();
+      applyMode(currentMode);
+
+      window.addEventListener('resize', onWindowResize);
+      animate();
+    }
+
+    function onWindowResize() {
+      const container = document.getElementById('viewport-container');
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+      renderer.setSize(width, height);
+    }
+
+    // -------------------------------------------------------------------
+    // 3. GEOMETRY HELPER: SOLID SECTOR RING
+    // -------------------------------------------------------------------
+    function createSolidSectorRing(rIn, rOut, height, thetaStart, thetaLength, bevel = 0.3) {
+      const shape = new THREE.Shape();
+      const segments = Math.max(16, Math.floor(thetaLength * 20));
+      const isFullCircle = Math.abs(thetaLength - Math.PI * 2) < 0.01;
+
+      if (isFullCircle) {
+        shape.absarc(0, 0, rOut, 0, Math.PI * 2, false);
+        if (rIn > 0.001) {
+          const hole = new THREE.Path();
+          hole.absarc(0, 0, rIn, 0, Math.PI * 2, true);
+          shape.holes.push(hole);
+        }
+      } else {
+        const p0x = Math.cos(thetaStart) * rIn;
+        const p0y = Math.sin(thetaStart) * rIn;
+        shape.moveTo(p0x, p0y);
+
+        const p1x = Math.cos(thetaStart) * rOut;
+        const p1y = Math.sin(thetaStart) * rOut;
+        shape.lineTo(p1x, p1y);
+
+        for (let i = 1; i <= segments; i++) {
+          const ang = thetaStart + (i / segments) * thetaLength;
+          shape.lineTo(Math.cos(ang) * rOut, Math.sin(ang) * rOut);
+        }
+
+        const endAng = thetaStart + thetaLength;
+        shape.lineTo(Math.cos(endAng) * rIn, Math.sin(endAng) * rIn);
+
+        for (let i = segments; i >= 0; i--) {
+          const ang = thetaStart + (i / segments) * thetaLength;
+          shape.lineTo(Math.cos(ang) * rIn, Math.sin(ang) * rIn);
+        }
+      }
+
+      const geom = new THREE.ExtrudeGeometry(shape, {
+        depth: height,
+        bevelEnabled: bevel > 0,
+        bevelSegments: 2,
+        steps: 1,
+        bevelSize: bevel,
+        bevelThickness: bevel,
+        curveSegments: 36
+      });
+      geom.translate(0, 0, -height / 2);
+      return geom;
+    }
+
+    // -------------------------------------------------------------------
+    // 4. BUILD 3D ACTUATOR WITH AUTH CHIP, DRY/WET SEALS & POGO PINS
+    // -------------------------------------------------------------------
+    function buildModel() {
+      while (actuatorGroup.children.length > 0) actuatorGroup.remove(actuatorGroup.children[0]);
+      while (upstreamPlateGroup.children.length > 0) upstreamPlateGroup.remove(upstreamPlateGroup.children[0]);
+      while (downstreamPlateGroup.children.length > 0) downstreamPlateGroup.remove(downstreamPlateGroup.children[0]);
+      componentMeshes = {};
+
+      const sizeSpec = DM_SIZES[currentSize] || DM_SIZES.L;
+      const rRef = DM_SIZES.L.R;
+      const hRef = DM_SIZES.L.H;
+      const radialScale = sizeSpec.R / rRef;
+      const axialScale = sizeSpec.H / hRef;
+      const isCutaway = (currentMode === 'cutaway');
+
+      const thetaStart = isCutaway ? Math.PI * 0.5 : 0;
+      const thetaLength = isCutaway ? Math.PI * 1.5 : Math.PI * 2;
+
+      // PBR High-End Materials
+      const M = {
+        titaniumShell: new THREE.MeshStandardMaterial({ color: 0x3b4454, metalness: 0.88, roughness: 0.28 }),
+        capBevel: new THREE.MeshStandardMaterial({ color: 0x4f5b6e, metalness: 0.92, roughness: 0.22 }),
+        pcbGreen: new THREE.MeshStandardMaterial({ color: 0x0f291e, metalness: 0.35, roughness: 0.45 }),
+        enigGold: new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.96, roughness: 0.18 }),
+        pogoGold: new THREE.MeshStandardMaterial({ color: 0xfbbf24, metalness: 0.98, roughness: 0.12 }),
+        chipBlack: new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.6 }),
+        siliconSteel: new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.78, roughness: 0.32 }),
+        pureCopper: new THREE.MeshStandardMaterial({ color: 0xdf7928, metalness: 0.94, roughness: 0.18 }),
+        bearingSteel: new THREE.MeshStandardMaterial({ color: 0xf8fafc, metalness: 0.96, roughness: 0.12 }),
+        rotorYoke: new THREE.MeshStandardMaterial({ color: 0x242e3d, metalness: 0.88, roughness: 0.26 }),
+        neodymiumMagnet: new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.95, roughness: 0.15 }),
+        oilSealOrange: new THREE.MeshStandardMaterial({ color: 0xf97316, roughness: 0.45, metalness: 0.1 }),
+        oilSealBlue: new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.4, metalness: 0.15 }),
+        gearHardened: new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.94, roughness: 0.16 }),
+        cartridgeCase: new THREE.MeshStandardMaterial({ color: 0x2d3748, metalness: 0.9, roughness: 0.25 }),
+        cryptoIC: new THREE.MeshStandardMaterial({ color: 0x090d16, roughness: 0.3, metalness: 0.8 }),
+        screwSteel: new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.95, roughness: 0.2 })
+      };
+
+      LAYERS_DATA.forEach(comp => {
+        const group = new THREE.Group();
+        group.name = comp.id;
+        const rIn = comp.rIn * radialScale;
+        const rOut = comp.id === 'conduit' ? sizeSpec.bore : comp.rOut * radialScale;
+        const len = comp.len * axialScale;
+
+        // 1. REAR CAP (后段电控 · 钛灰阳极铝壳 + 4×M3沉头孔 + 氟橡胶O-Ring密封圈槽)
+        if (comp.id === 'rear_cap') {
+          const capWall = createSolidSectorRing(rIn, rOut, len * 0.85, thetaStart, thetaLength, 0.4);
+          const capWallMesh = new THREE.Mesh(capWall, M.titaniumShell);
+          capWallMesh.castShadow = true;
+          group.add(capWallMesh);
+
+          const backPlate = createSolidSectorRing(rIn, rOut, 2.8 * axialScale, thetaStart, thetaLength, 0.4);
+          const backMesh = new THREE.Mesh(backPlate, M.titaniumShell);
+          backMesh.position.z = -len * 0.42;
+          group.add(backMesh);
+
+          // Chamfered bezel
+          const bevelRing = createSolidSectorRing(rOut - 2.5 * radialScale, rOut, 1.8 * axialScale, thetaStart, thetaLength, 0.5);
+          const bevelMesh = new THREE.Mesh(bevelRing, M.capBevel);
+          bevelMesh.position.z = -len * 0.42 - 0.9 * axialScale;
+          group.add(bevelMesh);
+
+          // Visible O-Ring Seal Ring (Fluoroelastomer Blue - Dry/Wet Chamber Interface)
+          const oRingGeo = new THREE.TorusGeometry((rIn + rOut) * 0.5, 0.9 * radialScale, 12, 36);
+          const oRingMesh = new THREE.Mesh(oRingGeo, M.oilSealBlue);
+          oRingMesh.position.z = len * 0.42;
+          group.add(oRingMesh);
+
+          // 4 M3 Counterbore Screw Holes
+          for (let b = 0; b < 4; b++) {
+            const bAng = (b / 4) * Math.PI * 2 + Math.PI / 4;
+            if (isCutaway && bAng >= 0 && bAng < Math.PI * 0.5) continue;
+            const bossR = (rIn + rOut) * 0.52;
+            const bossGeo = new THREE.CylinderGeometry(2.6 * radialScale, 2.6 * radialScale, len * 0.7, 16);
+            const bossMesh = new THREE.Mesh(bossGeo, M.titaniumShell);
+            bossMesh.position.set(Math.cos(bAng) * bossR, Math.sin(bAng) * bossR, 0);
+            bossMesh.rotation.x = Math.PI / 2;
+            group.add(bossMesh);
+
+            const holeGeo = new THREE.CylinderGeometry(1.4 * radialScale, 1.4 * radialScale, len * 0.85, 12);
+            const holeMesh = new THREE.Mesh(holeGeo, M.screwSteel);
+            holeMesh.position.set(Math.cos(bAng) * bossR, Math.sin(bAng) * bossR, 0);
+            holeMesh.rotation.x = Math.PI / 2;
+            group.add(holeMesh);
+          }
+        }
+
+        // 2. FOC PCB (后段电控 · 4缺口沉金PCBA + 6×大电流镀金弹簧插针 Pogo-Pins + MCU + MOS + 磁编)
+        else if (comp.id === 'foc_pcb') {
+          const pcbR = rOut * 0.92;
+          const pcbThick = 2.0 * axialScale;
+          const pcbShape = new THREE.Shape();
+          const numPts = 72;
+          for (let i = 0; i <= numPts; i++) {
+            const theta = (i / numPts) * Math.PI * 2;
+            let r = pcbR;
+            const modAng = (theta + Math.PI / 8) % (Math.PI / 2);
+            const distFromNotch = Math.abs(modAng - Math.PI / 8);
+            if (distFromNotch < 0.16) {
+              r = pcbR - 3.8 * radialScale * Math.cos((distFromNotch / 0.16) * Math.PI * 0.5);
+            }
+            const x = Math.cos(theta) * r;
+            const y = Math.sin(theta) * r;
+            if (i === 0) pcbShape.moveTo(x, y);
+            else pcbShape.lineTo(x, y);
+          }
+          const pcbHole = new THREE.Path();
+          pcbHole.absarc(0, 0, rIn * 1.05, 0, Math.PI * 2, true);
+          pcbShape.holes.push(pcbHole);
+
+          const pcbGeo = new THREE.ExtrudeGeometry(pcbShape, { depth: pcbThick, bevelEnabled: false, curveSegments: 36 });
+          pcbGeo.translate(0, 0, -pcbThick / 2);
+          const pcbMesh = new THREE.Mesh(pcbGeo, M.pcbGreen);
+          pcbMesh.castShadow = true;
+          group.add(pcbMesh);
+
+          // MCU FOC Controller Chip
+          const mcuGeo = new THREE.BoxGeometry(8 * radialScale, 8 * radialScale, 1.4 * axialScale);
+          const mcuMesh = new THREE.Mesh(mcuGeo, M.chipBlack);
+          mcuMesh.position.set(-13 * radialScale, 0, pcbThick * 0.5 + 0.7 * axialScale);
+          group.add(mcuMesh);
+
+          // 6 MOSFETs in Inverter Bridge
+          for (let m = 0; m < 6; m++) {
+            const mAng = (m / 6) * Math.PI * 2;
+            const mosGeo = new THREE.BoxGeometry(3.2 * radialScale, 4.8 * radialScale, 1.0 * axialScale);
+            const mosMesh = new THREE.Mesh(mosGeo, M.chipBlack);
+            mosMesh.position.set(Math.cos(mAng) * 23 * radialScale, Math.sin(mAng) * 23 * radialScale, pcbThick * 0.5 + 0.5 * axialScale);
+            mosMesh.rotation.z = mAng;
+            group.add(mosMesh);
+          }
+
+          // 6 Solderless Gold-plated Pogo-Pin Spring Terminals (免焊大电流触针)
+          for (let pin = 0; pin < 6; pin++) {
+            const pAng = (pin / 6) * Math.PI * 2 + 0.25;
+            const pinGeo = new THREE.CylinderGeometry(0.9 * radialScale, 0.9 * radialScale, 5.0 * axialScale, 12);
+            const pinMesh = new THREE.Mesh(pinGeo, M.pogoGold);
+            pinMesh.position.set(Math.cos(pAng) * 19 * radialScale, Math.sin(pAng) * 19 * radialScale, pcbThick * 0.5 + 2.5 * axialScale);
+            pinMesh.rotation.x = Math.PI / 2;
+            group.add(pinMesh);
+          }
+
+          // Gold Test & Calibration Pads
+          for (let p = 0; p < 8; p++) {
+            const pAng = (p / 8) * Math.PI * 2 + 0.1;
+            const padGeo = new THREE.CylinderGeometry(0.8 * radialScale, 0.8 * radialScale, 0.3, 10);
+            const padMesh = new THREE.Mesh(padGeo, M.enigGold);
+            padMesh.position.set(Math.cos(pAng) * 15 * radialScale, Math.sin(pAng) * 15 * radialScale, pcbThick * 0.5 + 0.1);
+            padMesh.rotation.x = Math.PI / 2;
+            group.add(padMesh);
+          }
+        }
+
+        // 3. STATOR CARRIER (中段动力 · 十字X辐条承力架 + 6个穿孔安装耳 + 内嵌球轴承)
+        else if (comp.id === 'stator_carrier') {
+          const ringGeo = createSolidSectorRing(rIn + 18 * radialScale, rOut, 4.0 * axialScale, thetaStart, thetaLength, 0.35);
+          const ringMesh = new THREE.Mesh(ringGeo, M.titaniumShell);
+          ringMesh.castShadow = true;
+          group.add(ringMesh);
+
+          // 6 External Mounting Lugs (内嵌不锈钢螺套)
+          for (let ear = 0; ear < 6; ear++) {
+            const earAng = (ear / 6) * Math.PI * 2;
+            if (isCutaway && earAng >= 0 && earAng < Math.PI * 0.5) continue;
+            const earR = rOut + 2.6 * radialScale;
+            const earGeo = new THREE.CylinderGeometry(2.8 * radialScale, 2.8 * radialScale, 4.0 * axialScale, 16);
+            const earMesh = new THREE.Mesh(earGeo, M.titaniumShell);
+            earMesh.position.set(Math.cos(earAng) * earR, Math.sin(earAng) * earR, 0);
+            earMesh.rotation.x = Math.PI / 2;
+            group.add(earMesh);
+
+            const earHole = new THREE.CylinderGeometry(1.4 * radialScale, 1.4 * radialScale, 4.4 * axialScale, 12);
+            const earHoleMesh = new THREE.Mesh(earHole, M.screwSteel);
+            earHoleMesh.position.set(Math.cos(earAng) * earR, Math.sin(earAng) * earR, 0);
+            earHoleMesh.rotation.x = Math.PI / 2;
+            group.add(earHoleMesh);
+          }
+
+          // 4 Cross Spoke Struts
+          for (let sp = 0; sp < 4; sp++) {
+            const spAng = (sp / 4) * Math.PI * 2;
+            if (isCutaway && spAng >= 0 && spAng < Math.PI * 0.5) continue;
+            const spokeLen = (rOut - (rIn + 8 * radialScale));
+            const spokeMid = (rIn + 8 * radialScale + rOut) * 0.5;
+            const spokeGeo = new THREE.BoxGeometry(3.6 * radialScale, spokeLen, 3.6 * axialScale);
+            const spokeMesh = new THREE.Mesh(spokeGeo, M.titaniumShell);
+            spokeMesh.position.set(Math.cos(spAng) * spokeMid, Math.sin(spAng) * spokeMid, 0);
+            spokeMesh.rotation.z = spAng + Math.PI / 2;
+            group.add(spokeMesh);
+          }
+        }
+
+        // 4. ROTOR (中段动力 · 外转子钟形罩 + 28极N52SH磁钢 + 渐开线花键输出轴)
+        else if (comp.id === 'rotor') {
+          const yokeGeo = createSolidSectorRing(rIn + 8 * radialScale, rOut, len * 0.72, thetaStart, thetaLength, 0.3);
+          const yokeMesh = new THREE.Mesh(yokeGeo, M.rotorYoke);
+          yokeMesh.castShadow = true;
+          group.add(yokeMesh);
+
+          // 28 Neodymium N52SH Tile Magnets
+          const numMags = 28;
+          for (let mag = 0; mag < numMags; mag++) {
+            const mAng = (mag / numMags) * Math.PI * 2;
+            if (isCutaway && mAng >= 0 && mAng < Math.PI * 0.5) continue;
+            const magGeo = new THREE.BoxGeometry(1.8 * radialScale, 2.6 * radialScale, len * 0.65);
+            const magMesh = new THREE.Mesh(magGeo, M.neodymiumMagnet);
+            const magR = rIn + 7.2 * radialScale;
+            magMesh.position.set(Math.cos(mAng) * magR, Math.sin(mAng) * magR, 0);
+            magMesh.rotation.z = mAng;
+            group.add(magMesh);
+          }
+
+          // Involute Spline Teeth Shaft Tip
+          const numSplines = 14;
+          const shaftR = rIn * 0.75;
+          for (let sp = 0; sp < numSplines; sp++) {
+            const spAng = (sp / numSplines) * Math.PI * 2;
+            if (isCutaway && spAng >= 0 && spAng < Math.PI * 0.5) continue;
+            const toothGeo = new THREE.BoxGeometry(0.7 * radialScale, 0.9 * radialScale, 11 * axialScale);
+            const toothMesh = new THREE.Mesh(toothGeo, M.bearingSteel);
+            toothMesh.position.set(Math.cos(spAng) * (shaftR + 0.35 * radialScale), Math.sin(spAng) * (shaftR + 0.35 * radialScale), len * 0.55);
+            toothMesh.rotation.z = spAng;
+            group.add(toothMesh);
+          }
+        }
+
+        // 5. STATOR (中段动力 · 24槽硅钢叠片定子 + 纯紫铜高槽满率集中绕组)
+        else if (comp.id === 'stator') {
+          const coreGeo = createSolidSectorRing(rIn, rOut - 1.8 * radialScale, len * 0.75, thetaStart, thetaLength, 0.3);
+          const coreMesh = new THREE.Mesh(coreGeo, M.siliconSteel);
+          coreMesh.castShadow = true;
+          group.add(coreMesh);
+
+          // 18 Radial Copper Coil Windings (rich golden-copper)
+          const numSlots = 18;
+          for (let s = 0; s < numSlots; s++) {
+            const sAng = (s / numSlots) * Math.PI * 2;
+            if (isCutaway && sAng >= 0 && sAng < Math.PI * 0.5) continue;
+            const coilGeo = new THREE.BoxGeometry(2.6 * radialScale, 5.0 * radialScale, len * 0.85);
+            const coilMesh = new THREE.Mesh(coilGeo, M.pureCopper);
+            const coilDist = (rIn + rOut) * 0.5;
+            coilMesh.position.set(Math.cos(sAng) * coilDist, Math.sin(sAng) * coilDist, 0);
+            coilMesh.rotation.z = sAng;
+            group.add(coilMesh);
+
+            for (const endZ of [-len * 0.42, len * 0.42]) {
+              const endBulge = new THREE.Mesh(new THREE.CylinderGeometry(1.4 * radialScale, 1.4 * radialScale, 2.6 * radialScale, 10), M.pureCopper);
+              endBulge.position.set(Math.cos(sAng) * coilDist, Math.sin(sAng) * coilDist, endZ);
+              endBulge.rotation.z = sAng + Math.PI / 2;
+              group.add(endBulge);
+            }
+          }
+        }
+
+        // 6. SEALED REDUCER CARTRIDGE (前段卡匣 · 出厂终身密封湿区胶囊 + 旋转骨架油封 + 加密认证芯片)
+        else if (comp.id === 'sealed_cartridge') {
+          // Cylindrical sealed cartridge body capsule
+          const cartridgeGeo = createSolidSectorRing(rIn, rOut, len * 0.82, thetaStart, thetaLength, 0.35);
+          const cartridgeMesh = new THREE.Mesh(cartridgeGeo, M.cartridgeCase);
+          cartridgeMesh.castShadow = true;
+          group.add(cartridgeMesh);
+
+          // Double Lip Rotary Oil Seal Rings (Fluoroelastomer Orange - 100% 锁死黄油)
+          for (const sZ of [-len * 0.38, len * 0.38]) {
+            const sealGeo = new THREE.TorusGeometry(rOut * 0.95, 1.0 * radialScale, 12, 36);
+            const sealMesh = new THREE.Mesh(sealGeo, M.oilSealOrange);
+            sealMesh.position.z = sZ;
+            group.add(sealMesh);
+          }
+
+          // Embedded Crypto-Auth Security Element (1-Wire/NFC 加密芯片与双镀金触点)
+          const cryptoGeo = new THREE.BoxGeometry(4 * radialScale, 6 * radialScale, 1.6 * axialScale);
+          const cryptoMesh = new THREE.Mesh(cryptoGeo, M.cryptoIC);
+          cryptoMesh.position.set(0, rOut * 0.88, -len * 0.35);
+          group.add(cryptoMesh);
+
+          for (let pin = -1; pin <= 1; pin += 2) {
+            const pGeo = new THREE.BoxGeometry(0.7 * radialScale, 1.4 * radialScale, 0.5 * axialScale);
+            const pMesh = new THREE.Mesh(pGeo, M.pogoGold);
+            pMesh.position.set(pin * 1.2 * radialScale, rOut * 0.88, -len * 0.35 + 0.9 * axialScale);
+            group.add(pMesh);
+          }
+
+          // Front Output Flange with ISO 9409 Circular PCD
+          const flangeR = rOut * 0.95;
+          const flangeThick = 5.0 * axialScale;
+          const flangeGeo = createSolidSectorRing(rIn, flangeR, flangeThick, thetaStart, thetaLength, 0.3);
+          const flangeMesh = new THREE.Mesh(flangeGeo, M.titaniumShell);
+          flangeMesh.position.z = len * 0.42 + flangeThick * 0.5;
+          group.add(flangeMesh);
+
+          // 6x M4 PCD Output Bolt Holes
+          const pcdR = sizeSpec.PCD;
+          for (let b = 0; b < 6; b++) {
+            const bAng = (b / 6) * Math.PI * 2;
+            if (isCutaway && bAng >= 0 && bAng < Math.PI * 0.5) continue;
+            const bGeo = new THREE.CylinderGeometry(1.8 * radialScale, 1.8 * radialScale, flangeThick * 1.05, 14);
+            const bMesh = new THREE.Mesh(bGeo, M.screwSteel);
+            bMesh.position.set(Math.cos(bAng) * pcdR, Math.sin(bAng) * pcdR, len * 0.42 + flangeThick * 0.5);
+            bMesh.rotation.x = Math.PI / 2;
+            group.add(bMesh);
+          }
+
+          // Internal Reducer Mechanics
+          if (currentReducerType === 'planetary') {
+            const numPlanets = 4;
+            const planetR = 4.2 * radialScale;
+            const orbitR = (rIn + rOut) * 0.48;
+            for (let p = 0; p < numPlanets; p++) {
+              const pAng = (p / numPlanets) * Math.PI * 2 + 0.35;
+              if (isCutaway && pAng >= 0 && pAng < Math.PI * 0.5) continue;
+              const px = Math.cos(pAng) * orbitR;
+              const py = Math.sin(pAng) * orbitR;
+              const pGeo = new THREE.CylinderGeometry(planetR, planetR, len * 0.55, 20);
+              const pMesh = new THREE.Mesh(pGeo, M.gearHardened);
+              pMesh.position.set(px, py, 0);
+              pMesh.rotation.x = Math.PI / 2;
+              group.add(pMesh);
+            }
+          } else if (currentReducerType === 'harmonic') {
+            // Flexible spline cup with fine teeth
+            const flexR = (rIn + rOut) * 0.52;
+            const flexGeo = createSolidSectorRing(flexR - 2.5 * radialScale, flexR, len * 0.6, thetaStart, thetaLength, 0.2);
+            const flexMesh = new THREE.Mesh(flexGeo, M.bearingSteel);
+            group.add(flexMesh);
+          }
+        }
+
+        // 7. CROSS ROLLER BEARING (CRB-5515 超薄高刚性交叉滚子轴承 - 解耦倾覆弯矩)
+        else if (comp.id === 'cross_bearing') {
+          const crbOuter = createSolidSectorRing(rIn, rOut, len * 0.8, thetaStart, thetaLength, 0.2);
+          const crbMesh = new THREE.Mesh(crbOuter, M.bearingSteel);
+          crbMesh.castShadow = true;
+          group.add(crbMesh);
+
+          // 90° Cross Rollers
+          const numRollers = 24;
+          const rMid = (rIn + rOut) * 0.5;
+          for (let r = 0; r < numRollers; r++) {
+            const rAng = (r / numRollers) * Math.PI * 2;
+            if (isCutaway && rAng >= 0 && rAng < Math.PI * 0.5) continue;
+            const rollerGeo = new THREE.CylinderGeometry(1.6 * radialScale, 1.6 * radialScale, 4.0 * axialScale, 12);
+            const rollerMesh = new THREE.Mesh(rollerGeo, M.bearingSteel);
+            rollerMesh.position.set(Math.cos(rAng) * rMid, Math.sin(rAng) * rMid, 0);
+            // Alternate 90° cross tilt
+            rollerMesh.rotation.z = rAng + (r % 2 === 0 ? Math.PI / 4 : -Math.PI / 4);
+            group.add(rollerMesh);
+          }
+        }
+
+        // 8. CENTRAL CONDUIT (全轴中空中空过线管 - Ø20mm免拆端子贯通通道)
+        else if (comp.id === 'conduit') {
+          const conduitGeo = createSolidSectorRing(rIn, rOut, len, thetaStart, thetaLength, 0.2);
+          const conduitMesh = new THREE.Mesh(conduitGeo, M.bearingSteel);
+          group.add(conduitMesh);
+
+          const wireColors = [0xef4444, 0x1e293b, 0x3b82f6, 0xfacc15, 0x22c55e];
+          const wireRadius = 0.9 * radialScale;
+          for (let w = 0; w < 5; w++) {
+            const wireAng = (w / 5) * Math.PI * 2;
+            const wireR = (rOut * 0.5);
+            const wireCurve = new THREE.LineCurve3(
+              new THREE.Vector3(Math.cos(wireAng) * wireR, Math.sin(wireAng) * wireR, -len * 0.65),
+              new THREE.Vector3(Math.cos(wireAng + 0.5) * wireR, Math.sin(wireAng + 0.5) * wireR, len * 0.65)
+            );
+            const wireGeo = new THREE.TubeGeometry(wireCurve, 12, wireRadius, 8, false);
+            const wireMat = new THREE.MeshStandardMaterial({ color: wireColors[w], roughness: 0.5 });
+            group.add(new THREE.Mesh(wireGeo, wireMat));
+          }
+        }
+
+        componentMeshes[comp.id] = group;
+        actuatorGroup.add(group);
+      });
+
+      // Programmable Cyber RGB Halo Light Ring
+      const haloGeo = new THREE.TorusGeometry(rRef * 0.98, 1.2 * radialScale, 16, 64);
+      const haloMat = new THREE.MeshBasicMaterial({ color: HALO_COLORS[haloColorIndex].hex });
+      haloLightMesh = new THREE.Mesh(haloGeo, haloMat);
+      haloLightMesh.position.z = -axialScale * 14;
+      actuatorGroup.add(haloLightMesh);
+
+      // Mating arm plates (for Mating mode)
+      buildMatingPlates(sizeSpec, radialScale, axialScale);
+    }
+
+    function buildMatingPlates(sizeSpec, radialScale, axialScale) {
+      const plateMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.85, roughness: 0.3 });
+
+      // Upstream Arm Plate (Bolts to Stator)
+      const upPlateGeo = new THREE.BoxGeometry(sizeSpec.R * 2.3, 16 * radialScale, 8 * axialScale);
+      const upMesh = new THREE.Mesh(upPlateGeo, plateMat);
+      upMesh.position.set(0, sizeSpec.R * 1.3, -axialScale * 25);
+      upstreamPlateGroup.add(upMesh);
+
+      // Downstream Arm Plate (Bolts to Output Flange)
+      const downPlateGeo = new THREE.BoxGeometry(sizeSpec.R * 2.3, 16 * radialScale, 8 * axialScale);
+      const downMesh = new THREE.Mesh(downPlateGeo, plateMat);
+      downMesh.position.set(0, sizeSpec.R * 1.3, axialScale * 35);
+      downstreamPlateGroup.add(downMesh);
+    }
+
+    // -------------------------------------------------------------------
+    // 5. TEARDOWN, EXPLODED, CUTAWAY & ASSEMBLED MODES
+    // -------------------------------------------------------------------
+    function setMode(mode, btn) {
+      currentMode = mode;
+      document.querySelectorAll('[id^="btn-mode-"]').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+
+      const expBar = document.getElementById('exploded-bar');
+      if (mode === 'exploded' || mode === 'teardown') {
+        expBar.classList.add('show');
+      } else {
+        expBar.classList.remove('show');
+      }
+
+      applyMode(mode);
+    }
+
+    function applyMode(mode) {
+      buildModel();
+      const sliderVal = parseFloat(document.getElementById('explode-slider').value) / 100;
+
+      upstreamPlateGroup.visible = (mode === 'mating');
+      downstreamPlateGroup.visible = (mode === 'mating');
+      isRunningMotion = (mode === 'exterior' || mode === 'mating');
+
+      if (mode === 'teardown') {
+        // Tri-Block Teardown:
+        // Block 1 (Electronics): pulls BACK (-Z)
+        // Block 2 (Power Core): STAYS IN CENTER
+        // Block 3 (Sealed Cartridge): slides FORWARD (+Z)
+        const span = 90 * sliderVal;
+        setComponentZ('rear_cap', -span * 1.2);
+        setComponentZ('foc_pcb', -span * 0.7);
+        setComponentZ('stator_carrier', 0);
+        setComponentZ('rotor', 0);
+        setComponentZ('stator', 0);
+        setComponentZ('sealed_cartridge', span * 1.1);
+        setComponentZ('cross_bearing', span * 0.5);
+        setComponentZ('conduit', 0);
+      } else if (mode === 'exploded') {
+        // Standard full axial explosion
+        const span = 130 * sliderVal;
+        setComponentZ('rear_cap', -span * 1.0);
+        setComponentZ('foc_pcb', -span * 0.65);
+        setComponentZ('stator_carrier', -span * 0.3);
+        setComponentZ('rotor', 0);
+        setComponentZ('stator', span * 0.3);
+        setComponentZ('cross_bearing', span * 0.65);
+        setComponentZ('sealed_cartridge', span * 1.0);
+        setComponentZ('conduit', 0);
+      } else {
+        // Assembled / Cutaway / Mating: all aligned to 0
+        LAYERS_DATA.forEach(c => setComponentZ(c.id, 0));
+      }
+    }
+
+    function setComponentZ(id, zPos) {
+      if (componentMeshes[id]) {
+        componentMeshes[id].position.z = zPos;
+      }
+    }
+
+    function onExplodeSlider(val) {
+      document.getElementById('explode-val').textContent = val + '%';
+      if (currentMode === 'exploded' || currentMode === 'teardown') {
+        applyMode(currentMode);
+      }
+    }
+
+    // -------------------------------------------------------------------
+    // 6. REDUCER CARTRIDGE SWITCHER
+    // -------------------------------------------------------------------
+    function setReducer(type, btn) {
+      currentReducerType = type;
+      document.querySelectorAll('[id^="btn-red-"]').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+
+      const hudRed = document.getElementById('hud-reducer-val');
+      const hudTorque = document.getElementById('hud-torque-val');
+      if (type === 'harmonic') {
+        hudRed.textContent = '1:50 零背隙谐波胶囊';
+        hudRed.style.color = 'var(--accent-purple)';
+        hudTorque.textContent = '18 / 54 Nm (机械臂高刚性)';
+      } else if (type === 'planetary') {
+        hudRed.textContent = '1:7 准直驱行星胶囊';
+        hudRed.style.color = '#38bdf8';
+        hudTorque.textContent = '6 / 18 Nm (足式高爆发/顺应力控)';
+      } else {
+        hudRed.textContent = '1:1 纯中空直驱套件';
+        hudRed.style.color = '#4ade80';
+        hudTorque.textContent = '1.8 / 5.4 Nm (360°高速云台/雷达)';
+      }
+
+      buildModel();
+      applyMode(currentMode);
+    }
+
+    // -------------------------------------------------------------------
+    // 7. CRYPTO-AUTH & HALO RING INTERACTION
+    // -------------------------------------------------------------------
+    function toggleAuthState() {
+      isGenuineAuth = !isGenuineAuth;
+      const btn = document.getElementById('btn-auth-toggle');
+      const badge = document.getElementById('hud-auth-badge');
+      if (isGenuineAuth) {
+        btn.textContent = '🛡️ 官方加密认证: [正品·100%性能]';
+        btn.style.color = '#4ade80';
+        btn.style.borderColor = 'rgba(34,197,94,0.35)';
+        btn.style.background = 'rgba(34,197,94,0.12)';
+        badge.textContent = '官方正品认证';
+        badge.className = 'badge badge-green';
+      } else {
+        btn.textContent = '⚠️ 极客 DIY 模式: [第三方未认证]';
+        btn.style.color = '#fbbf24';
+        btn.style.borderColor = 'rgba(245,158,11,0.35)';
+        btn.style.background = 'rgba(245,158,11,0.12)';
+        badge.textContent = '开源 DIY 兼容模式';
+        badge.className = 'badge badge-gold';
+      }
+    }
+
+    function cycleHaloColor() {
+      haloColorIndex = (haloColorIndex + 1) % HALO_COLORS.length;
+      const c = HALO_COLORS[haloColorIndex];
+      document.getElementById('btn-halo').textContent = '🌈 极客光环: ' + c.name.split(' ')[0];
+      if (haloLightMesh) {
+        haloLightMesh.material.color.setHex(c.hex);
+      }
+    }
+
+    // -------------------------------------------------------------------
+    // 8. SIDEBAR LAYER LIST POPULATION
+    // -------------------------------------------------------------------
+    function populateLayerList() {
+      const container = document.getElementById('layer-list-container');
+      container.innerHTML = '';
+
+      LAYERS_DATA.forEach(comp => {
+        const item = document.createElement('div');
+        item.className = 'layer-item';
+        item.id = 'layer-item-' + comp.id;
+        item.onclick = () => highlightLayer(comp.id);
+
+        item.innerHTML = `
+          <div class="layer-header">
+            <div class="layer-name">
+              <span class="layer-dot" style="background:${comp.dotColor}"></span>
+              <span>${comp.name}</span>
+            </div>
+            <span class="layer-tag">${comp.tag}</span>
+          </div>
+          <div class="layer-desc">${comp.desc}</div>
+          <div class="layer-meta">
+            <div><strong>材质与工艺:</strong> ${comp.mat}</div>
+            <div><strong>拆卸与维护:</strong> ${comp.tool}</div>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function highlightLayer(id) {
+      document.querySelectorAll('.layer-item').forEach(el => el.classList.remove('active'));
+      const activeEl = document.getElementById('layer-item-' + id);
+      if (activeEl) activeEl.classList.add('active');
+
+      Object.keys(componentMeshes).forEach(key => {
+        const m = componentMeshes[key];
+        if (key === id) {
+          m.traverse(child => {
+            if (child.isMesh && child.material) {
+              child.material.emissive = new THREE.Color(0x38bdf8);
+              child.material.emissiveIntensity = 0.45;
+            }
+          });
+        } else {
+          m.traverse(child => {
+            if (child.isMesh && child.material && child.material.emissive) {
+              child.material.emissive = new THREE.Color(0x000000);
+            }
+          });
+        }
+      });
+    }
+
+    // -------------------------------------------------------------------
+    // 9. CAMERA & ANIMATION LOOP
+    // -------------------------------------------------------------------
+    function zoomCam(delta) {
+      const dir = new THREE.Vector3().subVectors(controls.target, camera.position).normalize();
+      camera.position.addScaledVector(dir, delta * 20);
+    }
+
+    function resetCam() {
+      camera.position.set(135, 95, 145);
+      controls.target.set(-6, 0, 0);
+      controls.update();
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+
+      if (isRunningMotion) {
+        const motorSpd = 3.5;
+        if (componentMeshes['rotor']) componentMeshes['rotor'].rotation.z += motorSpd * delta;
+
+        let outputSpd = motorSpd / 7;
+        if (currentReducerType === 'harmonic') outputSpd = -motorSpd / 50;
+        else if (currentReducerType === 'direct') outputSpd = motorSpd;
+
+        if (componentMeshes['sealed_cartridge']) componentMeshes['sealed_cartridge'].rotation.z += outputSpd * delta;
+        if (downstreamPlateGroup) downstreamPlateGroup.rotation.z += outputSpd * delta;
+      }
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    window.onload = () => {
+      initThree();
+      const params = new URLSearchParams(window.location.search);
+      const redParam = params.get('reducer');
+      if (redParam && ['harmonic', 'planetary', 'direct'].includes(redParam)) {
+        const rBtn = document.querySelector(`[onclick*="'${redParam}'"]`);
+        setReducer(redParam, rBtn);
+      }
+    };
+  </script>
+</body>
+</html>
